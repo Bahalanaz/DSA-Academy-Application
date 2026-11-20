@@ -1,0 +1,6 @@
+# Copy to android/key.properties (never commit that file — it's in .gitignore)
+# and fill in. storeFile is relative to android/app.
+storeFile=../../../dsa-release-key.jks
+storePassword=the-password-you-chose
+keyAlias=dsa
+keyPassword=the-password-you-chose

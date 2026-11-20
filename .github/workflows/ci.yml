@@ -1,0 +1,160 @@
+# Continuous integration: every push and pull request to main is checked
+# automatically on GitHub's machines. A red X on a commit means something
+# below failed; click it to see which step and why.
+#
+# No secrets are used here. The APK built below is a test build signed with
+# the debug key, not the release APK families install (that one is still
+# built and signed separately, outside CI).
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# A newer push to the same branch cancels the older, still-running check.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    name: Server (Dart)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dsa_server
+    # A throwaway MySQL for the API tests, gone when the job ends. Its
+    # password guards nothing, so it isn't a secret.
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -h 127.0.0.1 -pci-only-password"
+          --health-interval 5s --health-timeout 5s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.1
+
+      - name: Install packages
+        run: dart pub get
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib bin test
+
+      - name: Analyze
+        run: dart analyze --fatal-infos
+
+      # Unit tests, then the API tests: the real server against a database
+      # built from dsa_app/database/schema.sql.
+      - name: Run tests
+        env:
+          TEST_MYSQL_HOST: 127.0.0.1
+          TEST_MYSQL_PORT: 3306
+          TEST_MYSQL_USER: root
+          TEST_MYSQL_PASSWORD: ci-only-password
+        run: dart test -r expanded
+
+      # The same Linux build that runs on the Azure server.
+      - name: Build server
+        run: mkdir -p build && dart compile exe bin/server.dart -o build/dsa_server
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsa_server-linux-x64
+          path: dsa_server/build/dsa_server
+          retention-days: 14
+
+  # Builds the server image and starts it with MySQL exactly as
+  # docker-compose.yml does, then checks they work together: the server is
+  # healthy and the seeded admin can sign in (schema, grants, server).
+  docker:
+    name: Docker (server + MySQL)
+    runs-on: ubuntu-latest
+    env:
+      MYSQL_ROOT_PASSWORD: ciOnlyRootPassword
+      DSA_DB_PASSWORD: ciOnlyAppPassword
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start
+        run: docker compose up -d --build --wait --wait-timeout 300
+
+      - name: Health check
+        run: curl -fsS http://localhost:8080/health
+
+      - name: Admin can sign in
+        run: |
+          curl -fsS -X POST http://localhost:8080/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"identifier":"admin","password":"admin123"}' | grep -q '"token"'
+
+      - name: The server is not using root
+        run: |
+          docker compose exec -T db mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N \
+            -e "SELECT COUNT(*) FROM information_schema.processlist WHERE user = 'dsa_app_user'" \
+            | grep -qv '^0$'
+
+      - name: Container logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop
+        if: always()
+        run: docker compose down -v
+
+  app:
+    name: App (Flutter)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dsa_app
+    steps:
+      - uses: actions/checkout@v4
+
+      # Android Gradle Plugin 9 needs Java 17 or newer.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.1
+          channel: stable
+          cache: true
+
+      - name: Install packages
+        run: flutter pub get
+
+      - name: Check formatting
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
+      - name: Build test APK
+        run: flutter build apk --release
+
+      # The web version (installable on iPhone and laptops).
+      - name: Build web version
+        run: flutter build web --release --no-wasm-dry-run --base-href /app/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dsa_app-test-apk
+          path: dsa_app/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 14

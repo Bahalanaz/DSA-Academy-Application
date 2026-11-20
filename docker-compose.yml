@@ -1,0 +1,59 @@
+# The whole backend on one machine: MySQL and the API server, each in its
+# own container.
+#
+#   cp docker.env.example .env      # then set the two passwords in .env
+#   docker compose up -d --build     # build, start, and wait in the background
+#   curl http://localhost:8080/health
+#   docker compose down              # stop (add -v to also delete the data)
+#
+# The database starts from dsa_app/database/schema.sql, so it has the seed
+# rows: categories, fees, order items and the dev admin "admin" / "admin123".
+# Change that password before this holds anything real.
+#
+# For local development and demos. The live server on Azure runs without
+# Docker.
+
+services:
+  db:
+    image: mysql:8.0
+    # UAE time: billing decides "today" and closes months by MySQL's clock.
+    command: --default-time-zone=+04:00
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      DSA_DB_PASSWORD: ${DSA_DB_PASSWORD:?set DSA_DB_PASSWORD in .env}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./dsa_app/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./docker/mysql-init/02-app-user.sh:/docker-entrypoint-initdb.d/02-app-user.sh:ro
+      - ./dsa_app/database/app_user_grants.sql:/dsa/app_user_grants.sql:ro
+    healthcheck:
+      # Only answers once the first-run setup above has finished.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+    restart: unless-stopped
+
+  server:
+    build: ./dsa_server
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: dsa_app_user
+      DB_PASSWORD: ${DSA_DB_PASSWORD}
+      DB_NAME: dsa_db
+      PORT: 8080
+      # Optional: email and push stay off when these are empty.
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      MAIL_FROM_EMAIL: ${MAIL_FROM_EMAIL:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-DSA Elite Academy}
+      FIREBASE_SERVICE_ACCOUNT: ${FIREBASE_SERVICE_ACCOUNT:-}
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+
+volumes:
+  db_data:

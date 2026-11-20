@@ -1,0 +1,19 @@
+name: dsa_server
+description: Backend API for DSA Elite — the only thing that holds MySQL credentials.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
+  mysql_client: ^0.0.27
+  dotenv: ^4.2.0
+  bcrypt: ^1.1.3
+  crypto: ^3.0.7
+  googleapis_auth: ^2.3.4
+  http: ^1.6.0
+dev_dependencies:
+  test: ^1.33.0

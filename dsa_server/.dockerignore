@@ -1,0 +1,7 @@
+# Kept out of the image: secrets, local build output and logs, tests.
+.env
+.dart_tool/
+build/
+server.log
+test/
+*.md

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AppColors.background in the Flutter app: launch screen, icon
+         background, and behind the app while it starts. -->
+    <color name="app_background">#121212</color>
+    <!-- AppColors.accent (Colors.green): tints the notification icon. -->
+    <color name="app_accent">#4CAF50</color>
+</resources>

@@ -1,0 +1,21 @@
+# Secrets: never committed. Copy the *.example files and fill them in locally.
+**/.env
+**/key.properties
+**/*.jks
+**/*.keystore
+**/firebase-service-account*.json
+# Each deployment uses its own Firebase project.
+dsa_app/android/app/google-services.json
+dsa_app/ios/Runner/GoogleService-Info.plist
+
+# Database copies and backups.
+*.sql.gz
+**/database/backups/
+**/*dump*.sql
+*.bak
+
+# Build output and tools.
+**/build/
+**/.dart_tool/
+**/.idea/
+.vscode/
