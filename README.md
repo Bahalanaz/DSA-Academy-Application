@@ -2,15 +2,31 @@
 
 [![CI](https://github.com/Bahalanaz/DSA-Academy-Application/actions/workflows/ci.yml/badge.svg)](https://github.com/Bahalanaz/DSA-Academy-Application/actions/workflows/ci.yml)
 
-A full-stack management app for a youth basketball academy, built with
+**A real product in production use, not a tutorial or demo.** A full-stack
+management app for a youth basketball academy in the UAE, built with
 **Flutter** and a **Dart** REST API on **MySQL**. Families register players,
 follow training and tournaments, pay fees and order kit; coaches run the
 whole academy from the same app.
 
-It runs in production for a real academy (Android app plus an installable
-web version for iPhone and laptops). This repository is a public copy of the
-code: server addresses, keys and every piece of real data have been removed,
-and the database seeds contain only made-up people.
+## Project status and my role
+
+- **Live since October 2026.** The academy's families and coaches use it
+  every day: an Android app plus an installable web version for iPhone and
+  laptops.
+- **Built and maintained by me, end to end.** I gathered the requirements
+  with the academy and did the design, the Flutter app, the API, the
+  database, hosting and deployment, and I support the people using it.
+- **In active development.** New features ship regularly as versioned
+  releases (currently 1.0.25), driven by feedback from the academy and its
+  families.
+- **Real production work:** changing a live database without losing data,
+  keeping apps already installed on families' phones working through server
+  updates, recovering from a server outage, and handling real money (fees,
+  refunds, credit).
+
+This repository is a public copy of the code, shared with the academy's
+permission. Server addresses, keys and every piece of real data have been
+removed, and the database seeds contain only made-up people.
 
 ## At a glance
 
@@ -142,5 +158,6 @@ the server, an APK and the web app on every push.
 
 ## License
 
-Shown for portfolio and learning purposes. All rights reserved: please ask
+The code belongs to the academy and is shown here, with their permission,
+as part of my portfolio. All rights reserved: please ask
 before reusing the code.
